@@ -1,17 +1,28 @@
 
 BubblesGame:
     
-
 <BubblesGame>:
     gameworld: gameworld
     GameWorld:
         id: gameworld
         gamescreenmanager: gamescreenmanager
+        canvas.before:
+            Color:
+                rgba: 0.8, 0.8, 0.8, 1
+            Rectangle:
+                pos: root.pos
+                size: root.size
         PositionSystem:
             system_id: 'position'
             gameworld: gameworld
         RotateSystem:
             system_id: 'rotate'
+            gameworld: gameworld
+        ColorSystem:
+            system_id: 'color'
+            gameworld: gameworld
+        BoundarySystem:
+            system_id: 'boundary'
             gameworld: gameworld
         GameView:
             system_id: 'gameview'
@@ -19,26 +30,25 @@ BubblesGame:
             updateable: False
             gameworld: gameworld
             pos: root.pos
-            size: root.size
             do_scroll: False
+            size: root.size
         GameMap:
             system_id: 'map'
             map_size: root.size
             gameworld: gameworld
-        Renderer:
+        QuadRendererNoTextures:
             gameworld: gameworld
-            system_id: 'renderer'
-            shader_source: 'assets/glsl/positionshader.glsl'
-            atlas_dir: 'assets/'
-            atlas: 'images_atlas'
+            system_id: 'debug_renderer'
+            shader_source: 'assets/glsl/positioncolorshader.glsl'
         DynamicRenderer:
             gameworld: gameworld
             system_id: 'physics_renderer'
             shader_source: 'assets/glsl/positionrotateshader.glsl'
             atlas_dir: 'assets/'
             atlas: 'images_atlas'
+            physics_system: 'physics'
         CymunkPhysics:
-            gameworld: gameworld
+            gameworld: root.gameworld
             system_id: 'physics'
             viewport: 'gameview'
     GameScreenManager:
@@ -46,6 +56,7 @@ BubblesGame:
         size: root.size
         pos: root.pos
         gameworld: gameworld
+
 
 <MainScreen@GameScreen>:
     name: 'main'

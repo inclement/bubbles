@@ -2,6 +2,7 @@
 from kivy.app import App
 
 from kivy.uix.widget import Widget
+from kivy.uix.effectwidget import EffectWidget, FXAAEffect
 from kivy.core.window import Window
 from kivy.clock import Clock
 
@@ -10,11 +11,52 @@ from kivent import GameSystem
 
 from random import randint
 from math import radians
+from functools import partial
+
+class BoundarySystem(GameSystem):
+
+    def generate_boundary(self, pos, size):
+        gameworld = self.gameworld
+        shape_dict = {'width': size[0],
+                      'height': size[1],
+                      'mass': 0}
+        col_shape_dict = {'shape_type': 'box',
+                          'elasticity': 0.0,
+                          'collision_type': 2,
+                          'shape_info': shape_dict,
+                          'friction': 0.0}
+        physics_component_dict = {'main_shape': 'box',
+                                  'velocity': (0, 0),
+                                  'position': pos,
+                                  'angle': 0,
+                                  'angular_velocity': 0,
+                                  'mass': 0,
+                                  'vel_limit': 0,
+                                  'ang_vel_limit': 0,
+                                  'col_shapes': [col_shape_dict]}
+        boundary_system = {}
+        create_component_dict = {
+            'position': pos,
+            'rotate': 0.,
+            'color': (1.0, 0.0, 0.0, 0.75),
+            'physics': physics_component_dict,
+            'boundary': boundary_system,
+            'debug_renderer': {'size': size}}
+        component_order = ['position', 'rotate', 'color',
+                           'physics', 'boundary', 'debug_renderer']
+        self.gameworld.init_entity(create_component_dict, component_order)
+
+    def clear(self):
+        gameworld = self.gameworld
+        remove = gameworld.timed_remove_entity
+        for entity_id in self.entity_ids:
+            Clock.schedule_once(partial(remove, entity_id))
 
 
-class BubblesGame(Widget):
+class BubblesGame(EffectWidget):
     def __init__(self, **kwargs):
         super(BubblesGame, self).__init__(**kwargs)
+        self.effects = [FXAAEffect()]
         Clock.schedule_once(self.init_game)
 
     def init_game(self, dt):
@@ -33,10 +75,12 @@ class BubblesGame(Widget):
 
     def setup_states(self):
         self.gameworld.add_state(state_name='main',
-                                 systems_added=['physics_renderer'],
+                                 systems_added=['debug_renderer',
+                                                'physics_renderer'],
                                  systems_removed=[],
                                  systems_paused=[],
-                                 systems_unpaused=['physics_renderer'],
+                                 systems_unpaused=['debug_renderer',
+                                                   'physics_renderer'],
                                  screenmanager_screen='main')
 
     def set_state(self):
@@ -47,6 +91,16 @@ class BubblesGame(Widget):
         for x in range(50):
             pos = (randint(0, size[0]), randint(0, size[1]))
             self.create_bubble(pos)
+
+    def on_touch_down(self, touch):
+        super(BubblesGame, self).on_touch_down(touch)
+        self.on_touch_move(touch)
+
+    def on_touch_move(self, touch):
+        super(BubblesGame, self).on_touch_move(touch)
+        bs = self.gameworld.systems['boundary']
+        bs.clear()
+        bs.generate_boundary((0, 0), touch.pos)
 
     def create_bubble(self, pos):
         print 'creating bubble'
@@ -80,9 +134,11 @@ class BubblesGame(Widget):
                                                       'size': (64, 64)},
                                  'position': pos,
                                  'rotate': 0}
-        component_order = ['position', 'rotate', 'physics_renderer']
-        return self.gameworld.init_entity(create_component_dict,
-                                          component_order)
+        component_order = ['position', 'rotate', 'physics', 'physics_renderer']
+        result = self.gameworld.init_entity(create_component_dict,
+                                            component_order)
+        print 'result is', result
+        return result
 
 
 class BubblesApp(App):
