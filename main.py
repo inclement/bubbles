@@ -3,10 +3,11 @@ from kivy.app import App
 
 from kivy.uix.widget import Widget
 from kivy.uix.effectwidget import EffectWidget, FXAAEffect
+from kivy.uix.boxlayout import BoxLayout
 from kivy.core.window import Window
 from kivy.clock import Clock
 from kivy.vector import Vector
-from kivy.properties import ListProperty, DictProperty
+from kivy.properties import ListProperty, DictProperty, NumericProperty
 
 import kivent
 from kivent import GameSystem
@@ -20,7 +21,6 @@ import ipdb
 class BubbleSystem(GameSystem):
 
     def create_bubble(self, pos):
-        print 'creating bubble'
         x_vel = randint(-100, 100)
         y_vel = randint(-100, 100)
 
@@ -32,10 +32,10 @@ class BubbleSystem(GameSystem):
                       'mass': 50,
                       'offset': (0, 0)}
         col_shape = {'shape_type': 'circle',
-                     'elasticity': .5,
+                     'elasticity': 1.,
                      'collision_type': 1,
                      'shape_info': shape_dict,
-                     'friction': 1.0}
+                     'friction': 10.0}
         col_shapes = [col_shape]
         physics_component = {'main_shape': 'circle',
                              'velocity': (x_vel, y_vel),
@@ -55,7 +55,6 @@ class BubbleSystem(GameSystem):
         component_order = ['position', 'rotate', 'physics', 'bubble', 'physics_renderer']
         result = self.gameworld.init_entity(create_component_dict,
                                             component_order)
-        print 'result is', result
         return result
 
 
@@ -93,7 +92,7 @@ class BoundarySystem(GameSystem):
                       'height': size[1],
                       'mass': 0}
         col_shape_dict = {'shape_type': 'box',
-                          'elasticity': 0.0,
+                          'elasticity': 1.,
                           'collision_type': 2,
                           'shape_info': shape_dict,
                           'friction': 0.0}
@@ -133,6 +132,11 @@ class BubblesGame(EffectWidget):
     boundary_size = ListProperty([200, 200])
 
     touches = DictProperty([])
+
+    elasticity = NumericProperty()
+    friction = NumericProperty()
+    radius = NumericProperty()
+    damping = NumericProperty()
     
     def __init__(self, **kwargs):
         super(BubblesGame, self).__init__(**kwargs)
@@ -181,9 +185,53 @@ class BubblesGame(EffectWidget):
     def create_bubbles(self):
         size = Window.size
         bubble_system = self.gameworld.systems['bubble']
-        for x in range(3):
-            pos = (randint(100, size[0]-100), randint(100, size[1]-100))
+        for x in range(10):
+            pos = (randint(100, 200), randint(100, 200))
             bubble_system.create_bubble(pos)
+
+    def on_damping(self, *args):
+        damping = self.damping
+        try:
+            self.gameworld.systems['physics'].space.damping = damping
+        except KeyError:
+            pass
+
+    def on_elasticity(self, *args):
+        elasticity = self.elasticity
+        self.set_shape_attrs('elasticity', elasticity)
+
+    def on_friction(self, *args):
+        friction = self.friction
+        self.set_shape_attrs('friction', friction)
+
+    def on_radius(self, *args):
+        radius = self.radius
+        gw = self.gameworld
+        try:
+            bubble_system = gw.systems['bubble']
+            entity_ids = bubble_system.entity_ids
+            for eid in entity_ids:
+                entity = gw.entities[eid]
+                entity.physics.shapes[0].unsafe_set_radius(radius)
+        except KeyError:
+            pass
+
+    def set_shape_attrs(self, attr_name, value):
+        gw = self.gameworld
+        try:
+            bubble_system = gw.systems['bubble']
+            entity_ids = bubble_system.entity_ids
+            for eid in entity_ids:
+                entity = gw.entities[eid]
+                setattr(entity.physics.shapes[0], attr_name,
+                        value)
+                gw.systems['physics'].space.reindex_shape(
+                    entity.physics.shapes[0])
+
+        except KeyError:
+            pass
+        
+        
 
     def on_touch_down(self, touch):
         super(BubblesGame, self).on_touch_down(touch)
@@ -206,11 +254,12 @@ class BubblesGame(EffectWidget):
         if match is None:
             return
 
+        #ipdb.set_trace()
+
         touch.ud['entity'] = (entity, dr)
         self.touches[touch] = [touch, entity, dr, (0., 0.)]
         self.move_entities_with_touch()
 
-        #ipdb.set_trace()
 
     def on_touch_up(self, touch):
         if touch in self.touches:
@@ -221,27 +270,26 @@ class BubblesGame(EffectWidget):
     def move_entities_with_touch(self, *args):
         for touch, values in self.touches.items():
             touch, entity, dr, force = values
-            print 'current force is', entity, entity.physics.body.force
             entity.physics.body.apply_force((-1*force[0], -1*force[1]))
-            print 'force reduced', entity.physics.body.force
             dr = (Vector([entity.position.x, entity.position.y]) -
                   Vector(touch.pos))
             dist = sqrt(dr[0]**2 + dr[1]**2)
             new_force = tuple([-100*dr[0], -100*dr[1]])
             values[3] = new_force
             entity.physics.body.apply_force(new_force)
-            print 'new force', entity.physics.body.force
 
     def redraw_boundaries(self, *args):
         bs = self.gameworld.systems['boundary']
         bs.clear()
         bs.generate_boundaries(self.boundary_pos, self.boundary_size)
 
-
+class Interface(BoxLayout):
+    pass
 
 class BubblesApp(App):
     def build(self):
-        Window.clearcolor = (0.5, 0.5, 0.5, 1)
+        Window.clearcolor = (0.1, 0.1, 0.1, 1)
+
 
 
 if __name__ == "__main__":

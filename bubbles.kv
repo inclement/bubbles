@@ -1,5 +1,88 @@
+Interface:
 
-BubblesGame:
+<LineLabel@Label>:
+    size_hint_x: None
+    width: self.texture_size[0]
+
+<LineBoxLayout@BoxLayout>:
+    size_hint_y: None
+    height: dp(48)
+
+<Interface>:
+    orientation: 'vertical'
+    BoxLayout:
+        BoxLayout:
+            orientation: 'vertical'
+            Splitter:
+                sizable_from: 'bottom'
+                max_size: 10000
+                min_size: 10
+                keep_within_parent: True
+                Widget:
+            BubblesGame:
+                elasticity: el_sl.value
+                friction: el_fr.value
+                radius: el_ra.value
+                damping: 1. - el_da.value
+        Splitter:
+            sizable_from: 'left'
+            max_size: 10000
+            min_size: 10
+            keep_within_parent: True
+            Widget:
+    LineBoxLayout:
+        LineLabel:
+            text: 'Elasticity'
+        Slider:
+            id: el_sl
+            min: 0.
+            max: 3.
+            step: 0.05
+            value: 1.
+        Label:
+            size_hint_x: None
+            width: dp(50)
+            text: str(el_sl.value)
+    LineBoxLayout:
+        LineLabel:
+            text: 'Friction'
+        Slider:
+            id: el_fr
+            min: 0.
+            max: 100.
+            step: 0.5
+            value: 10.
+        Label:
+            size_hint_x: None
+            width: dp(50)
+            text: str(el_fr.value)
+    LineBoxLayout:
+        LineLabel:
+            text: 'Radius'
+        Slider:
+            id: el_ra
+            min: 5.
+            max: 100.
+            step: 0.1
+            value: 32
+        Label:
+            size_hint_x: None
+            width: dp(50)
+            text: str(el_ra.value)
+    LineBoxLayout:
+        LineLabel:
+            text: 'Damping'
+        Slider:
+            id: el_da
+            min: 0.
+            max: 1.
+            step: 0.01
+            value: 0.
+        Label:
+            size_hint_x: None
+            width: dp(50)
+            text: str(el_da.value)
+        
     
 <BubblesGame>:
     gameworld: gameworld
